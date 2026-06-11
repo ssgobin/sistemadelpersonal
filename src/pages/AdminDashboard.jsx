@@ -12,6 +12,7 @@ import {
   CalendarCheck,
   CheckCircle2,
   Clock3,
+  ChevronDown,
   Loader2,
   Plus,
   Search,
@@ -68,6 +69,7 @@ export default function AdminDashboard() {
   const [filters, setFilters] = useState({ date: '', status: '', service: '', name: '' });
   const [availabilitySlots, setAvailabilitySlots] = useState([]);
   const [newSlot, setNewSlot] = useState(initialNewSlot);
+  const [expandedAvailabilityDates, setExpandedAvailabilityDates] = useState([]);
   const [savingAvailability, setSavingAvailability] = useState(false);
 
   useEffect(() => {
@@ -204,6 +206,12 @@ export default function AdminDashboard() {
     }));
   }
 
+  function toggleAvailabilityDate(date) {
+    setExpandedAvailabilityDates((current) =>
+      current.includes(date) ? current.filter((item) => item !== date) : [...current, date],
+    );
+  }
+
   function addAvailabilitySlot() {
     if (!newSlot.date || newSlot.times.length === 0) {
       Swal.fire({
@@ -226,6 +234,7 @@ export default function AdminDashboard() {
 
       return normalizeAvailability([...next, { date: newSlot.date, times: newSlot.times }]);
     });
+    setExpandedAvailabilityDates((current) => (current.includes(newSlot.date) ? current : [...current, newSlot.date]));
     setNewSlot(initialNewSlot);
   }
 
@@ -371,30 +380,64 @@ export default function AdminDashboard() {
                 Nenhum horário configurado ainda.
               </div>
             ) : (
-              availabilitySlots.map((slot) => (
-                <div key={slot.date} className="rounded-lg border border-slate-200 p-4">
-                  <div className="flex flex-wrap items-center justify-between gap-3">
-                    <p className="font-black text-slate-950">{formatDate(slot.date)}</p>
-                    <span className="text-xs font-black uppercase tracking-wide text-slate-500">
-                      {slot.times.length} horário{slot.times.length === 1 ? '' : 's'}
-                    </span>
+              availabilitySlots.map((slot) => {
+                const expanded = expandedAvailabilityDates.includes(slot.date);
+                const previewTimes = slot.times.slice(0, 5);
+
+                return (
+                  <div key={slot.date} className="rounded-lg border border-slate-200 bg-white">
+                    <button
+                      type="button"
+                      className="flex w-full flex-col gap-3 p-4 text-left hover:bg-slate-50 sm:flex-row sm:items-center sm:justify-between"
+                      onClick={() => toggleAvailabilityDate(slot.date)}
+                    >
+                      <div>
+                        <p className="font-black text-slate-950">{formatDate(slot.date)}</p>
+                        <div className="mt-2 flex flex-wrap gap-2">
+                          {previewTimes.map((time) => (
+                            <span key={time} className="rounded-lg bg-slate-100 px-2.5 py-1 text-xs font-black text-slate-600">
+                              {time}
+                            </span>
+                          ))}
+                          {slot.times.length > previewTimes.length && (
+                            <span className="rounded-lg bg-slate-950 px-2.5 py-1 text-xs font-black text-white">
+                              +{slot.times.length - previewTimes.length}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-black uppercase tracking-wide text-slate-500">
+                          {slot.times.length} horário{slot.times.length === 1 ? '' : 's'}
+                        </span>
+                        <span className="inline-flex items-center gap-1 text-xs font-black text-slate-600">
+                          {expanded ? 'Ocultar' : 'Ver horários'}
+                          <ChevronDown className={`transition ${expanded ? 'rotate-180' : ''}`} size={16} />
+                        </span>
+                      </div>
+                    </button>
+
+                    {expanded && (
+                      <div className="border-t border-slate-200 p-4">
+                        <div className="flex flex-wrap gap-2">
+                          {slot.times.map((time) => (
+                            <button
+                              key={time}
+                              type="button"
+                              className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-black text-slate-700 hover:border-red-200 hover:bg-red-50 hover:text-red-700"
+                              onClick={() => removeAvailabilityTime(slot.date, time)}
+                              title="Remover horário"
+                            >
+                              {time}
+                              <XCircle size={14} />
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    {slot.times.map((time) => (
-                      <button
-                        key={time}
-                        type="button"
-                        className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-black text-slate-700 hover:border-red-200 hover:bg-red-50 hover:text-red-700"
-                        onClick={() => removeAvailabilityTime(slot.date, time)}
-                        title="Remover horário"
-                      >
-                        {time}
-                        <XCircle size={14} />
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              ))
+                );
+              })
             )}
           </div>
         </section>
