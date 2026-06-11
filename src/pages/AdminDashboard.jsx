@@ -43,7 +43,14 @@ const statusLabels = {
   concluido: 'concluído',
 };
 
-const initialNewSlot = { date: '', time: '' };
+const presetTimeGroups = {
+  morning: ['06:00', '07:00', '08:00', '09:00', '10:00', '11:00'],
+  afternoon: ['12:00', '13:00', '14:00', '15:00', '16:00', '17:00'],
+  evening: ['18:00', '19:00', '20:00', '21:00'],
+};
+
+const presetTimes = [...presetTimeGroups.morning, ...presetTimeGroups.afternoon, ...presetTimeGroups.evening];
+const initialNewSlot = { date: '', times: [], customTime: '' };
 
 function normalizeAvailability(slots = []) {
   return slots
@@ -166,12 +173,42 @@ export default function AdminDashboard() {
     }
   }
 
+  function toggleDraftTime(time) {
+    setNewSlot((current) => {
+      const selected = current.times.includes(time);
+      return {
+        ...current,
+        times: selected ? current.times.filter((item) => item !== time) : [...current.times, time].sort(),
+      };
+    });
+  }
+
+  function selectDraftGroup(times) {
+    setNewSlot((current) => ({
+      ...current,
+      times: Array.from(new Set([...current.times, ...times])).sort(),
+    }));
+  }
+
+  function clearDraftTimes() {
+    setNewSlot((current) => ({ ...current, times: [] }));
+  }
+
+  function addCustomDraftTime() {
+    if (!newSlot.customTime) return;
+    setNewSlot((current) => ({
+      ...current,
+      customTime: '',
+      times: Array.from(new Set([...current.times, current.customTime])).sort(),
+    }));
+  }
+
   function addAvailabilitySlot() {
-    if (!newSlot.date || !newSlot.time) {
+    if (!newSlot.date || newSlot.times.length === 0) {
       Swal.fire({
         icon: 'info',
-        title: 'Informe data e horário',
-        text: 'Escolha os dois campos antes de adicionar à disponibilidade.',
+        title: 'Informe data e horários',
+        text: 'Escolha uma data e selecione pelo menos um horário.',
         confirmButtonColor: '#0f172a',
       });
       return;
@@ -182,11 +219,11 @@ export default function AdminDashboard() {
       const existingDate = next.find((slot) => slot.date === newSlot.date);
 
       if (existingDate) {
-        existingDate.times = Array.from(new Set([...existingDate.times, newSlot.time])).sort();
+        existingDate.times = Array.from(new Set([...existingDate.times, ...newSlot.times])).sort();
         return normalizeAvailability(next);
       }
 
-      return normalizeAvailability([...next, { date: newSlot.date, times: [newSlot.time] }]);
+      return normalizeAvailability([...next, { date: newSlot.date, times: newSlot.times }]);
     });
     setNewSlot(initialNewSlot);
   }
@@ -255,32 +292,76 @@ export default function AdminDashboard() {
             </button>
           </div>
 
-          <div className="mt-5 grid gap-3 md:grid-cols-[1fr_1fr_auto]">
-            <label className="block">
-              <span className="mb-1 block text-xs font-black uppercase tracking-wide text-slate-500">Data</span>
-              <input
-                className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-slate-950"
-                type="date"
-                value={newSlot.date}
-                onChange={(event) => setNewSlot((current) => ({ ...current, date: event.target.value }))}
-              />
-            </label>
-            <label className="block">
-              <span className="mb-1 block text-xs font-black uppercase tracking-wide text-slate-500">Horário</span>
-              <input
-                className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-slate-950"
-                type="time"
-                value={newSlot.time}
-                onChange={(event) => setNewSlot((current) => ({ ...current, time: event.target.value }))}
-              />
-            </label>
-            <button
-              type="button"
-              className="inline-flex min-h-10 items-center justify-center gap-2 self-end rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-black text-slate-700 shadow-sm hover:bg-slate-100"
-              onClick={addAvailabilitySlot}
-            >
-              <Plus size={17} /> Adicionar
-            </button>
+          <div className="mt-5 rounded-lg border border-slate-200 bg-slate-50 p-4">
+            <div className="grid gap-4 lg:grid-cols-[260px_1fr]">
+              <label className="block">
+                <span className="mb-1 block text-xs font-black uppercase tracking-wide text-slate-500">Data</span>
+                <input
+                  className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-slate-950"
+                  type="date"
+                  value={newSlot.date}
+                  onChange={(event) => setNewSlot((current) => ({ ...current, date: event.target.value }))}
+                />
+              </label>
+
+              <div>
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <span className="block text-xs font-black uppercase tracking-wide text-slate-500">Selecione vários horários</span>
+                  <div className="flex flex-wrap gap-2">
+                    <QuickButton label="Manhã" onClick={() => selectDraftGroup(presetTimeGroups.morning)} />
+                    <QuickButton label="Tarde" onClick={() => selectDraftGroup(presetTimeGroups.afternoon)} />
+                    <QuickButton label="Noite" onClick={() => selectDraftGroup(presetTimeGroups.evening)} />
+                    <QuickButton label="Limpar" onClick={clearDraftTimes} />
+                  </div>
+                </div>
+
+                <div className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-4 xl:grid-cols-7">
+                  {presetTimes.map((time) => {
+                    const selected = newSlot.times.includes(time);
+                    return (
+                      <button
+                        key={time}
+                        type="button"
+                        className={`min-h-10 rounded-lg border px-3 py-2 text-sm font-black transition ${
+                          selected
+                            ? 'border-slate-950 bg-slate-950 text-white'
+                            : 'border-slate-200 bg-white text-slate-700 hover:border-slate-400'
+                        }`}
+                        onClick={() => toggleDraftTime(time)}
+                      >
+                        {time}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <div className="mt-4 grid gap-3 sm:grid-cols-[1fr_auto_auto] sm:items-end">
+                  <label className="block">
+                    <span className="mb-1 block text-xs font-black uppercase tracking-wide text-slate-500">Horário personalizado</span>
+                    <input
+                      className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-slate-950"
+                      type="time"
+                      value={newSlot.customTime}
+                      onChange={(event) => setNewSlot((current) => ({ ...current, customTime: event.target.value }))}
+                    />
+                  </label>
+                  <button
+                    type="button"
+                    className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-black text-slate-700 shadow-sm hover:bg-slate-100"
+                    onClick={addCustomDraftTime}
+                  >
+                    <Plus size={17} /> Incluir
+                  </button>
+                  <button
+                    type="button"
+                    className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-slate-950 px-4 py-2 text-sm font-black text-white hover:bg-slate-800"
+                    onClick={addAvailabilitySlot}
+                  >
+                    <Plus size={17} /> Adicionar {newSlot.times.length || ''}
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
 
           <div className="mt-5 space-y-3">
@@ -478,6 +559,18 @@ function ActionButton({ label, onClick }) {
     <button
       type="button"
       className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-700 shadow-sm hover:bg-slate-100"
+      onClick={onClick}
+    >
+      {label}
+    </button>
+  );
+}
+
+function QuickButton({ label, onClick }) {
+  return (
+    <button
+      type="button"
+      className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-black text-slate-600 shadow-sm hover:bg-slate-100"
       onClick={onClick}
     >
       {label}
