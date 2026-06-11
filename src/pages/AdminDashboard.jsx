@@ -5,6 +5,7 @@ import {
   onSnapshot,
   orderBy,
   query,
+  setDoc,
   updateDoc,
 } from 'firebase/firestore';
 import {
@@ -12,7 +13,9 @@ import {
   CheckCircle2,
   Clock3,
   Loader2,
+  Plus,
   Search,
+  Save,
   Trash2,
   XCircle,
 } from 'lucide-react';
@@ -40,10 +43,25 @@ const statusLabels = {
   concluido: 'concluído',
 };
 
+const initialNewSlot = { date: '', time: '' };
+
+function normalizeAvailability(slots = []) {
+  return slots
+    .map((slot) => ({
+      date: slot.date,
+      times: Array.from(new Set(slot.times || [])).sort(),
+    }))
+    .filter((slot) => slot.date && slot.times.length > 0)
+    .sort((a, b) => a.date.localeCompare(b.date));
+}
+
 export default function AdminDashboard() {
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState({ date: '', status: '', service: '', name: '' });
+  const [availabilitySlots, setAvailabilitySlots] = useState([]);
+  const [newSlot, setNewSlot] = useState(initialNewSlot);
+  const [savingAvailability, setSavingAvailability] = useState(false);
 
   useEffect(() => {
     const appointmentsQuery = query(collection(db, 'appointments'), orderBy('createdAt', 'desc'));
@@ -58,6 +76,14 @@ export default function AdminDashboard() {
         setLoading(false);
       },
     );
+
+    return unsubscribe;
+  }, []);
+
+  useEffect(() => {
+    const unsubscribe = onSnapshot(doc(db, 'settings', 'availability'), (snapshot) => {
+      setAvailabilitySlots(normalizeAvailability(snapshot.data()?.slots));
+    });
 
     return unsubscribe;
   }, []);
@@ -133,10 +159,71 @@ export default function AdminDashboard() {
       await deleteDoc(doc(db, 'appointments', appointment.id));
       Swal.fire({
         icon: 'success',
-        title: 'Agendamento excluido',
+        title: 'Agendamento excluído',
         timer: 1400,
         showConfirmButton: false,
       });
+    }
+  }
+
+  function addAvailabilitySlot() {
+    if (!newSlot.date || !newSlot.time) {
+      Swal.fire({
+        icon: 'info',
+        title: 'Informe data e horário',
+        text: 'Escolha os dois campos antes de adicionar à disponibilidade.',
+        confirmButtonColor: '#0f172a',
+      });
+      return;
+    }
+
+    setAvailabilitySlots((current) => {
+      const next = normalizeAvailability(current);
+      const existingDate = next.find((slot) => slot.date === newSlot.date);
+
+      if (existingDate) {
+        existingDate.times = Array.from(new Set([...existingDate.times, newSlot.time])).sort();
+        return normalizeAvailability(next);
+      }
+
+      return normalizeAvailability([...next, { date: newSlot.date, times: [newSlot.time] }]);
+    });
+    setNewSlot(initialNewSlot);
+  }
+
+  function removeAvailabilityTime(date, time) {
+    setAvailabilitySlots((current) =>
+      normalizeAvailability(
+        current
+          .map((slot) => (slot.date === date ? { ...slot, times: slot.times.filter((item) => item !== time) } : slot))
+          .filter((slot) => slot.times.length > 0),
+      ),
+    );
+  }
+
+  async function saveAvailability() {
+    setSavingAvailability(true);
+    try {
+      await setDoc(doc(db, 'settings', 'availability'), {
+        slots: normalizeAvailability(availabilitySlots),
+      });
+
+      Swal.fire({
+        icon: 'success',
+        title: 'Disponibilidade salva',
+        timer: 1500,
+        showConfirmButton: false,
+      });
+    } catch (error) {
+      console.error(error);
+      Swal.fire({
+        icon: 'error',
+        title: 'Não foi possível salvar',
+        text: 'Verifique sua conexão e tente novamente.',
+        confirmButtonColor: '#0f172a',
+      });
+    } finally {
+      setSavingAvailability(false);
     }
   }
 
@@ -150,6 +237,85 @@ export default function AdminDashboard() {
           <Metric title="Cancelados" value={metrics.cancelado} icon={XCircle} />
           <Metric title="Hoje" value={metrics.hoje} icon={CalendarCheck} />
         </div>
+
+        <section className="mt-6 rounded-lg border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+            <div>
+              <h2 className="text-lg font-black text-slate-950">Disponibilidade de horários</h2>
+              <p className="mt-1 text-sm text-slate-500">Configure as datas e horários que aparecem no formulário público.</p>
+            </div>
+            <button
+              type="button"
+              className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-slate-950 px-4 py-2 text-sm font-black text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-70"
+              onClick={saveAvailability}
+              disabled={savingAvailability}
+            >
+              {savingAvailability ? <Loader2 className="animate-spin" size={17} /> : <Save size={17} />}
+              {savingAvailability ? 'Salvando...' : 'Salvar disponibilidade'}
+            </button>
+          </div>
+
+          <div className="mt-5 grid gap-3 md:grid-cols-[1fr_1fr_auto]">
+            <label className="block">
+              <span className="mb-1 block text-xs font-black uppercase tracking-wide text-slate-500">Data</span>
+              <input
+                className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-slate-950"
+                type="date"
+                value={newSlot.date}
+                onChange={(event) => setNewSlot((current) => ({ ...current, date: event.target.value }))}
+              />
+            </label>
+            <label className="block">
+              <span className="mb-1 block text-xs font-black uppercase tracking-wide text-slate-500">Horário</span>
+              <input
+                className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-slate-950"
+                type="time"
+                value={newSlot.time}
+                onChange={(event) => setNewSlot((current) => ({ ...current, time: event.target.value }))}
+              />
+            </label>
+            <button
+              type="button"
+              className="inline-flex min-h-10 items-center justify-center gap-2 self-end rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-black text-slate-700 shadow-sm hover:bg-slate-100"
+              onClick={addAvailabilitySlot}
+            >
+              <Plus size={17} /> Adicionar
+            </button>
+          </div>
+
+          <div className="mt-5 space-y-3">
+            {availabilitySlots.length === 0 ? (
+              <div className="rounded-lg border border-dashed border-slate-300 p-5 text-sm font-semibold text-slate-500">
+                Nenhum horário configurado ainda.
+              </div>
+            ) : (
+              availabilitySlots.map((slot) => (
+                <div key={slot.date} className="rounded-lg border border-slate-200 p-4">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <p className="font-black text-slate-950">{formatDate(slot.date)}</p>
+                    <span className="text-xs font-black uppercase tracking-wide text-slate-500">
+                      {slot.times.length} horário{slot.times.length === 1 ? '' : 's'}
+                    </span>
+                  </div>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {slot.times.map((time) => (
+                      <button
+                        key={time}
+                        type="button"
+                        className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-black text-slate-700 hover:border-red-200 hover:bg-red-50 hover:text-red-700"
+                        onClick={() => removeAvailabilityTime(slot.date, time)}
+                        title="Remover horário"
+                      >
+                        {time}
+                        <XCircle size={14} />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </section>
 
         <section className="mt-6 rounded-lg border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
           <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">

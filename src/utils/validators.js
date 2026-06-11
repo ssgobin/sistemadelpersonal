@@ -40,7 +40,5 @@ export function validateAppointment(form) {
   if (form.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
     errors.email = 'Informe um e-mail válido.';
   }
-  if (!sanitizeText(form.notes)) errors.notes = 'Informe suas observações.';
-
   return errors;
 }

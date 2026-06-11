@@ -1,9 +1,19 @@
-import { addDoc, collection, getDocs, query, serverTimestamp, where } from 'firebase/firestore';
-import { CalendarDays, Loader2, Send } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import {
+  addDoc,
+  collection,
+  doc,
+  getDocs,
+  onSnapshot,
+  query,
+  serverTimestamp,
+  where,
+} from 'firebase/firestore';
+import { CalendarDays, Check, Clock3, Loader2, Send, X } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
 import Swal from 'sweetalert2';
 import { db } from '../firebase/config.js';
 import { sendAppointmentEmail } from '../utils/emailNotifications.js';
+import { formatDate } from '../utils/formatters.js';
 import { sanitizeText, serviceOptions, validateAppointment } from '../utils/validators.js';
 import SectionHeader from './SectionHeader.jsx';
 
@@ -17,17 +27,86 @@ const initialForm = {
   notes: '',
 };
 
+const fallbackSlots = [
+  { date: getDateOffset(1), times: ['08:00', '09:00', '10:00', '14:00', '15:00', '16:00'] },
+  { date: getDateOffset(2), times: ['08:00', '09:00', '10:00', '14:00', '15:00', '16:00'] },
+  { date: getDateOffset(3), times: ['08:00', '09:00', '10:00', '14:00', '15:00'] },
+];
+
+function getDateOffset(days) {
+  const date = new Date();
+  date.setDate(date.getDate() + days);
+  return date.toISOString().split('T')[0];
+}
+
+function isFutureSlot(date, time) {
+  return new Date(`${date}T${time}:00`) > new Date();
+}
+
+function normalizeSlots(slots = []) {
+  return slots
+    .map((slot) => ({
+      date: slot.date,
+      times: Array.from(new Set(slot.times || [])).sort(),
+    }))
+    .filter((slot) => slot.date && slot.times.length > 0)
+    .sort((a, b) => a.date.localeCompare(b.date));
+}
+
 export default function AppointmentForm() {
   const [form, setForm] = useState(initialForm);
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
+  const [slotModalOpen, setSlotModalOpen] = useState(false);
+  const [configuredSlots, setConfiguredSlots] = useState(fallbackSlots);
+  const [appointments, setAppointments] = useState([]);
 
-  const minDate = useMemo(() => new Date().toISOString().split('T')[0], []);
+  useEffect(() => {
+    const unsubscribe = onSnapshot(doc(db, 'settings', 'availability'), (snapshot) => {
+      const slots = normalizeSlots(snapshot.data()?.slots);
+      setConfiguredSlots(slots.length > 0 ? slots : fallbackSlots);
+    });
+
+    return unsubscribe;
+  }, []);
+
+  useEffect(() => {
+    const unsubscribe = onSnapshot(collection(db, 'appointments'), (snapshot) => {
+      setAppointments(snapshot.docs.map((document) => document.data()));
+    });
+
+    return unsubscribe;
+  }, []);
+
+  const reservedSlots = useMemo(() => {
+    return new Set(
+      appointments
+        .filter((appointment) => ['pendente', 'confirmado'].includes(appointment.status))
+        .map((appointment) => `${appointment.date}|${appointment.time}`),
+    );
+  }, [appointments]);
+
+  const availableSlots = useMemo(() => {
+    return normalizeSlots(configuredSlots)
+      .map((slot) => ({
+        date: slot.date,
+        times: slot.times.filter((time) => isFutureSlot(slot.date, time) && !reservedSlots.has(`${slot.date}|${time}`)),
+      }))
+      .filter((slot) => slot.times.length > 0);
+  }, [configuredSlots, reservedSlots]);
+
+  const selectedSlotLabel = form.date && form.time ? `${formatDate(form.date)} às ${form.time}` : 'Escolher data e horário';
 
   function handleChange(event) {
     const { name, value } = event.target;
     setForm((current) => ({ ...current, [name]: value }));
     setErrors((current) => ({ ...current, [name]: undefined }));
+  }
+
+  function selectSlot(date, time) {
+    setForm((current) => ({ ...current, date, time }));
+    setErrors((current) => ({ ...current, date: undefined, time: undefined }));
+    setSlotModalOpen(false);
   }
 
   async function hasDuplicateSlot() {
@@ -145,21 +224,21 @@ export default function AppointmentForm() {
                 ))}
               </select>
             </Field>
-            <Field label="Data desejada" error={errors.date}>
-              <input className="input-del" name="date" type="date" min={minDate} value={form.date} onChange={handleChange} required />
-            </Field>
-            <Field label="Horário desejado" error={errors.time}>
-              <input className="input-del" name="time" type="time" value={form.time} onChange={handleChange} required />
-            </Field>
+            <div className="sm:col-span-2">
+              <Field label="Data e horário" error={errors.date || errors.time}>
+                <button
+                  type="button"
+                  className="input-del flex min-h-14 w-full items-center justify-between gap-3 text-left"
+                  onClick={() => setSlotModalOpen(true)}
+                >
+                  <span className={form.date && form.time ? 'font-bold text-white' : 'text-slate-400'}>{selectedSlotLabel}</span>
+                  <CalendarDays className="shrink-0 text-volt" size={20} />
+                </button>
+              </Field>
+            </div>
             <div className="sm:col-span-2">
               <Field label="Observações" error={errors.notes}>
-                <textarea
-                  className="input-del min-h-32 resize-y py-4"
-                  name="notes"
-                  value={form.notes}
-                  onChange={handleChange}
-                  required
-                />
+                <textarea className="input-del min-h-32 resize-y py-4" name="notes" value={form.notes} onChange={handleChange} />
               </Field>
             </div>
           </div>
@@ -169,7 +248,83 @@ export default function AppointmentForm() {
           </button>
         </form>
       </div>
+
+      {slotModalOpen && (
+        <SlotModal
+          slots={availableSlots}
+          selectedDate={form.date}
+          selectedTime={form.time}
+          onClose={() => setSlotModalOpen(false)}
+          onSelect={selectSlot}
+        />
+      )}
     </section>
+  );
+}
+
+function SlotModal({ slots, selectedDate, selectedTime, onClose, onSelect }) {
+  return (
+    <div className="fixed inset-0 z-50 grid place-items-center bg-black/70 px-4 py-6 backdrop-blur-sm">
+      <div className="max-h-[88vh] w-full max-w-3xl overflow-hidden rounded-lg border border-white/10 bg-[#101820] shadow-2xl">
+        <div className="flex items-start justify-between gap-4 border-b border-white/10 p-5 sm:p-6">
+          <div>
+            <p className="text-xs font-black uppercase tracking-[0.18em] text-volt">Horários disponíveis</p>
+            <h3 className="mt-2 text-2xl font-black text-white">Escolha seu agendamento</h3>
+          </div>
+          <button
+            type="button"
+            className="grid h-10 w-10 shrink-0 place-items-center rounded-lg border border-white/10 text-slate-300 hover:bg-white/10"
+            onClick={onClose}
+            aria-label="Fechar seleção de horário"
+          >
+            <X size={20} />
+          </button>
+        </div>
+
+        <div className="max-h-[62vh] overflow-y-auto p-5 sm:p-6">
+          {slots.length === 0 ? (
+            <div className="rounded-lg border border-white/10 bg-white/5 p-6 text-center">
+              <Clock3 className="mx-auto text-volt" size={28} />
+              <p className="mt-3 font-black text-white">Nenhum horário disponível no momento</p>
+              <p className="mt-2 text-sm text-slate-400">Novas datas podem ser liberadas pela equipe administrativa.</p>
+            </div>
+          ) : (
+            <div className="space-y-5">
+              {slots.map((slot) => (
+                <section key={slot.date} className="rounded-lg border border-white/10 bg-white/[0.03] p-4">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <h4 className="font-black text-white">{formatDate(slot.date)}</h4>
+                    <span className="text-xs font-bold uppercase tracking-wide text-slate-400">
+                      {slot.times.length} horário{slot.times.length === 1 ? '' : 's'}
+                    </span>
+                  </div>
+                  <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+                    {slot.times.map((time) => {
+                      const selected = selectedDate === slot.date && selectedTime === time;
+                      return (
+                        <button
+                          key={time}
+                          type="button"
+                          className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border px-3 py-2 text-sm font-black transition ${
+                            selected
+                              ? 'border-volt bg-volt text-slate-950'
+                              : 'border-white/10 bg-white/5 text-slate-100 hover:border-volt/70 hover:bg-volt/10'
+                          }`}
+                          onClick={() => onSelect(slot.date, time)}
+                        >
+                          {selected ? <Check size={16} /> : <Clock3 size={16} />}
+                          {time}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </section>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
   );
 }
 
