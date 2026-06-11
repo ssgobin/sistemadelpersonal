@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 540" role="img" aria-label="Avaliação física e treino personalizado">
+  <rect width="720" height="540" rx="24" fill="#0d1218"/>
+  <rect x="52" y="54" width="616" height="432" rx="18" fill="#121923" stroke="#233041"/>
+  <circle cx="220" cy="190" r="66" fill="#e8f0f6"/>
+  <path d="M105 404c28-98 68-148 119-148s92 50 123 148z" fill="#f8fafc"/>
+  <rect x="410" y="140" width="160" height="26" rx="13" fill="#9cff2e"/>
+  <rect x="410" y="202" width="208" height="18" rx="9" fill="#45566b"/>
+  <rect x="410" y="244" width="174" height="18" rx="9" fill="#45566b"/>
+  <rect x="410" y="286" width="224" height="18" rx="9" fill="#45566b"/>
+  <path d="M82 82h145M501 454h120" stroke="#15d4ff" stroke-width="10" stroke-linecap="round"/>
+</svg>

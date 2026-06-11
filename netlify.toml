@@ -1,0 +1,10 @@
+[build]
+  command = "npm run build"
+  publish = "dist"
+  functions = "netlify/functions"
+
+[dev]
+  command = "npm run dev:vite -- --host 127.0.0.1 --port 5174"
+  targetPort = 5174
+  port = 5173
+  publish = "."

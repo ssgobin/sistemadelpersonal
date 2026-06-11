@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 540" role="img" aria-label="Treino em academia">
+  <rect width="720" height="540" fill="#0b1017"/>
+  <rect x="70" y="90" width="580" height="360" rx="18" fill="#141c27"/>
+  <path d="M160 350h400M180 300h360" stroke="#233041" stroke-width="18" stroke-linecap="round"/>
+  <circle cx="360" cy="210" r="58" fill="#15d4ff"/>
+  <path d="M254 350c28-83 63-124 106-124s80 41 112 124z" fill="#f8fafc"/>
+  <path d="M120 152h120M480 152h120" stroke="#9cff2e" stroke-width="14" stroke-linecap="round"/>
+</svg>

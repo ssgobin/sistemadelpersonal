@@ -1,0 +1,177 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    margin: 0;
+    min-width: 320px;
+    background: #05070a;
+    color: #f8fafc;
+    font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+  }
+
+  ::selection {
+    background: rgba(156, 255, 46, 0.35);
+  }
+
+  @keyframes fade-up {
+    from {
+      opacity: 0;
+      transform: translateY(22px);
+    }
+
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes float-soft {
+    0%,
+    100% {
+      transform: translateY(0);
+    }
+
+    50% {
+      transform: translateY(-12px);
+    }
+  }
+
+  @keyframes glow-pulse {
+    0%,
+    100% {
+      box-shadow: 0 0 22px rgba(156, 255, 46, 0.14);
+    }
+
+    50% {
+      box-shadow: 0 0 42px rgba(21, 212, 255, 0.2);
+    }
+  }
+
+  @keyframes shimmer-line {
+    from {
+      transform: translateX(-120%);
+    }
+
+    to {
+      transform: translateX(120%);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      scroll-behavior: auto !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+@layer components {
+  .container-del {
+    @apply mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8;
+  }
+
+  .section-pad {
+    @apply py-16;
+  }
+
+  .eyebrow {
+    @apply text-xs font-bold uppercase tracking-[0.08em] text-volt;
+  }
+
+  .card-premium {
+    @apply rounded-[14px] border border-white/10 bg-white/[0.045] shadow-[0_0_0_1px_rgba(255,255,255,0.02),0_2px_6px_rgba(0,0,0,0.18),0_4px_12px_rgba(0,0,0,0.22)] backdrop-blur transition duration-300 hover:-translate-y-1 hover:border-electric/35 hover:shadow-glow;
+  }
+
+  .input-del {
+    @apply h-14 w-full rounded-lg border border-white/10 bg-white/[0.06] px-4 text-base font-normal text-white outline-none transition placeholder:text-slate-500 focus:border-electric focus:ring-0;
+  }
+
+  .btn-primary {
+    @apply inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-volt px-6 py-3 text-base font-semibold text-graphite shadow-glow transition hover:-translate-y-0.5 hover:bg-white focus:outline-none focus:ring-2 focus:ring-volt/50;
+  }
+
+  .btn-secondary {
+    @apply inline-flex min-h-12 items-center justify-center gap-2 rounded-full border border-white/15 bg-white/[0.06] px-6 py-3 text-base font-medium text-white transition hover:-translate-y-0.5 hover:border-electric hover:bg-electric/10 focus:outline-none focus:ring-2 focus:ring-electric/40;
+  }
+
+  .animate-fade-up {
+    animation: fade-up 0.75s ease both;
+  }
+
+  .animate-fade-up-delay-1 {
+    animation: fade-up 0.75s ease 0.12s both;
+  }
+
+  .animate-fade-up-delay-2 {
+    animation: fade-up 0.75s ease 0.24s both;
+  }
+
+  .animate-fade-up-delay-3 {
+    animation: fade-up 0.75s ease 0.36s both;
+  }
+
+  .animate-float-soft {
+    animation: float-soft 5.5s ease-in-out infinite;
+  }
+
+  .animate-glow-pulse {
+    animation: glow-pulse 3.8s ease-in-out infinite;
+  }
+
+  [data-reveal] {
+    opacity: 0;
+    transform: translateY(34px) scale(0.98);
+    transition:
+      opacity 0.7s ease,
+      transform 0.7s ease;
+    transition-delay: var(--reveal-delay, 0ms);
+  }
+
+  [data-reveal].is-visible {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+
+  [data-section-reveal] {
+    overflow: hidden;
+  }
+
+  [data-section-reveal] > .container-del {
+    opacity: 0;
+    filter: blur(8px);
+    transform: translateY(86px);
+    transition:
+      opacity 1s ease,
+      filter 1s ease,
+      transform 1.15s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  [data-section-reveal].is-visible > .container-del {
+    opacity: 1;
+    filter: blur(0);
+    transform: translateY(0);
+  }
+
+  .shimmer-line {
+    @apply pointer-events-none absolute inset-x-0 top-0 h-px overflow-hidden;
+  }
+
+  .shimmer-line::after {
+    content: '';
+    display: block;
+    height: 1px;
+    width: 45%;
+    background: linear-gradient(90deg, transparent, rgba(156, 255, 46, 0.85), transparent);
+    animation: shimmer-line 2.8s ease-in-out infinite;
+  }
+}

@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 540" role="img" aria-label="Consulta de bioimpedância">
+  <rect width="720" height="540" fill="#071016"/>
+  <rect x="98" y="84" width="524" height="372" rx="28" fill="#101923" stroke="#233041"/>
+  <rect x="160" y="150" width="190" height="240" rx="20" fill="#eaf2f6"/>
+  <path d="M188 218h134M188 270h106M188 322h150" stroke="#121923" stroke-width="14" stroke-linecap="round"/>
+  <circle cx="500" cy="234" r="64" fill="#9cff2e"/>
+  <path d="M452 330h96" stroke="#15d4ff" stroke-width="18" stroke-linecap="round"/>
+</svg>

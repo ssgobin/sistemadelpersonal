@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 1100" role="img" aria-label="Personal trainer em ambiente fitness">
+  <defs>
+    <linearGradient id="bg" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#151f2d"/>
+      <stop offset="0.52" stop-color="#05070a"/>
+      <stop offset="1" stop-color="#122a20"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0" x2="1">
+      <stop offset="0" stop-color="#9cff2e"/>
+      <stop offset="1" stop-color="#15d4ff"/>
+    </linearGradient>
+  </defs>
+  <rect width="900" height="1100" fill="url(#bg)"/>
+  <path d="M100 910c175-190 455-250 700-152v342H100z" fill="#0b1118"/>
+  <circle cx="468" cy="280" r="112" fill="#d9e5ec"/>
+  <path d="M285 650c34-135 98-218 184-218s154 85 191 218l58 212H225z" fill="#eaf2f6"/>
+  <path d="M342 615c39-54 81-81 126-81s91 27 139 81l36 247H303z" fill="#121923"/>
+  <path d="M214 660c77-135 163-202 257-202 98 0 190 68 276 202" fill="none" stroke="url(#accent)" stroke-width="30" stroke-linecap="round"/>
+  <path d="M110 176h250M540 188h250M96 840h180M622 820h182" stroke="#15d4ff" stroke-width="12" stroke-linecap="round" opacity=".35"/>
+  <text x="450" y="1010" text-anchor="middle" fill="#9cff2e" font-family="Arial, sans-serif" font-size="42" font-weight="700">DEL PERSONAL</text>
+</svg>

@@ -1,0 +1,12 @@
+node_modules/
+dist/
+.env
+.env.local
+.DS_Store
+npm-debug.log*
+deno.lock
+serviceAccount*.json
+serviceAccont*.json
+
+# Local Netlify folder
+.netlify
