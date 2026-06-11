@@ -12,7 +12,13 @@ function initializeAdmin() {
   const rawServiceAccount = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
   if (!rawServiceAccount) return null;
 
-  const credentials = JSON.parse(rawServiceAccount);
+  let credentials;
+  try {
+    credentials = JSON.parse(rawServiceAccount);
+  } catch {
+    throw new Error('FIREBASE_SERVICE_ACCOUNT_JSON_INVALID');
+  }
+
   return admin.initializeApp({
     credential: admin.credential.cert(credentials),
   });
@@ -115,13 +121,21 @@ function buildEmail({ type, status, appointment }) {
 }
 
 function validateAppointmentPayload(appointment) {
-  const requiredFields = ['name', 'phone', 'email', 'service', 'date', 'time', 'notes'];
+  const requiredFields = ['name', 'phone', 'email', 'service', 'date', 'time'];
   return requiredFields.filter((field) => !String(appointment?.[field] || '').trim());
 }
 
 function publicErrorMessage(error) {
   const code = error?.code || error?.responseCode;
   const message = String(error?.message || '').toLowerCase();
+
+  if (message.includes('firebase_service_account_json_invalid')) {
+    return 'FIREBASE_SERVICE_ACCOUNT_JSON inválido. Cole o JSON completo da conta de serviço em uma única linha.';
+  }
+
+  if (message.includes('failed to parse private key') || message.includes('service account')) {
+    return 'Credenciais Firebase Admin inválidas. Verifique FIREBASE_SERVICE_ACCOUNT_JSON.';
+  }
 
   if (code === 'EAUTH' || message.includes('auth')) {
     return 'Falha de autenticação no SMTP da Hostinger. Verifique HOSTINGER_SMTP_USER e HOSTINGER_SMTP_PASS.';
@@ -133,6 +147,10 @@ function publicErrorMessage(error) {
 
   if (code === 'EENVELOPE') {
     return 'Endereço de e-mail inválido ou recusado pelo servidor SMTP.';
+  }
+
+  if (error?.response) {
+    return `Falha ao enviar e-mail pelo SMTP: ${error.response}`;
   }
 
   return 'Falha ao enviar e-mail pelo SMTP.';
