@@ -117,6 +117,8 @@ export default function AdminDashboard() {
   }, [appointments]);
 
   async function updateStatus(appointment, status) {
+    if (appointment.status === status) return;
+
     try {
       await updateDoc(doc(db, 'appointments', appointment.id), { status });
 
@@ -510,9 +512,21 @@ export default function AdminDashboard() {
                         <td className="max-w-xs px-4 py-4 text-slate-600">{appointment.notes || '-'}</td>
                         <td className="px-4 py-4">
                           <div className="flex flex-wrap gap-2">
-                            <ActionButton label="Confirmar" onClick={() => updateStatus(appointment, 'confirmado')} />
-                            <ActionButton label="Cancelar" onClick={() => updateStatus(appointment, 'cancelado')} />
-                            <ActionButton label="Concluir" onClick={() => updateStatus(appointment, 'concluido')} />
+                            <ActionButton
+                              label="Confirmar"
+                              onClick={() => updateStatus(appointment, 'confirmado')}
+                              disabled={appointment.status === 'confirmado'}
+                            />
+                            <ActionButton
+                              label="Cancelar"
+                              onClick={() => updateStatus(appointment, 'cancelado')}
+                              disabled={appointment.status === 'cancelado'}
+                            />
+                            <ActionButton
+                              label="Concluir"
+                              onClick={() => updateStatus(appointment, 'concluido')}
+                              disabled={appointment.status === 'concluido'}
+                            />
                             <button
                               type="button"
                               className="grid h-9 w-9 place-items-center rounded-lg border border-red-200 bg-red-50 text-red-700 hover:bg-red-100"
@@ -553,12 +567,13 @@ function Metric({ title, value, icon: Icon }) {
   );
 }
 
-function ActionButton({ label, onClick }) {
+function ActionButton({ label, onClick, disabled = false }) {
   return (
     <button
       type="button"
-      className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-700 shadow-sm hover:bg-slate-100"
+      className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-700 shadow-sm hover:bg-slate-100 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400 disabled:shadow-none"
       onClick={onClick}
+      disabled={disabled}
     >
       {label}
     </button>
