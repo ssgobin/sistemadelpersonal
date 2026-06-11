@@ -125,7 +125,6 @@ export default function AdminDashboard() {
           type: 'status',
           status,
           appointment: { ...appointment, status },
-          requireAuth: true,
         });
       }
 

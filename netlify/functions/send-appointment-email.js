@@ -1,28 +1,9 @@
-import admin from 'firebase-admin';
 import nodemailer from 'nodemailer';
 
 const smtpUser = process.env.HOSTINGER_SMTP_USER || 'contato@trebintech.com';
 const smtpHost = process.env.HOSTINGER_SMTP_HOST || 'smtp.hostinger.com';
 const smtpPort = Number(process.env.HOSTINGER_SMTP_PORT || 465);
 const fromName = process.env.MAIL_FROM_NAME || 'Del Personal Trainer';
-
-function initializeAdmin() {
-  if (admin.apps.length > 0) return admin.app();
-
-  const rawServiceAccount = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
-  if (!rawServiceAccount) return null;
-
-  let credentials;
-  try {
-    credentials = JSON.parse(rawServiceAccount);
-  } catch {
-    throw new Error('FIREBASE_SERVICE_ACCOUNT_JSON_INVALID');
-  }
-
-  return admin.initializeApp({
-    credential: admin.credential.cert(credentials),
-  });
-}
 
 function createTransporter() {
   if (!process.env.HOSTINGER_SMTP_PASS) {
@@ -57,7 +38,7 @@ function appointmentRows(appointment) {
     ['Tipo de serviço', appointment.service],
     ['Data desejada', appointment.date],
     ['Horário desejado', appointment.time],
-    ['Observações', appointment.notes],
+    ['Observações', appointment.notes || '-'],
   ];
 
   return fields
@@ -129,14 +110,6 @@ function publicErrorMessage(error) {
   const code = error?.code || error?.responseCode;
   const message = String(error?.message || '').toLowerCase();
 
-  if (message.includes('firebase_service_account_json_invalid')) {
-    return 'FIREBASE_SERVICE_ACCOUNT_JSON inválido. Cole o JSON completo da conta de serviço em uma única linha.';
-  }
-
-  if (message.includes('failed to parse private key') || message.includes('service account')) {
-    return 'Credenciais Firebase Admin inválidas. Verifique FIREBASE_SERVICE_ACCOUNT_JSON.';
-  }
-
   if (code === 'EAUTH' || message.includes('auth')) {
     return 'Falha de autenticação no SMTP da Hostinger. Verifique HOSTINGER_SMTP_USER e HOSTINGER_SMTP_PASS.';
   }
@@ -156,23 +129,6 @@ function publicErrorMessage(error) {
   return 'Falha ao enviar e-mail pelo SMTP.';
 }
 
-async function requireAdmin(event) {
-  const authorization = event.headers.authorization || event.headers.Authorization || '';
-  const token = authorization.startsWith('Bearer ') ? authorization.slice(7) : '';
-
-  if (!token) {
-    return { ok: false, statusCode: 401, message: 'Token administrativo ausente.' };
-  }
-
-  const app = initializeAdmin();
-  if (!app) {
-    return { ok: false, statusCode: 500, message: 'FIREBASE_SERVICE_ACCOUNT_JSON não configurado.' };
-  }
-
-  await admin.auth().verifyIdToken(token);
-  return { ok: true };
-}
-
 export async function handler(event) {
   if (event.httpMethod !== 'POST') {
     return { statusCode: 405, body: JSON.stringify({ error: 'Método não permitido.' }) };
@@ -190,14 +146,8 @@ export async function handler(event) {
       };
     }
 
-    if (type === 'status') {
-      const adminCheck = await requireAdmin(event);
-      if (!adminCheck.ok) {
-        return { statusCode: adminCheck.statusCode, body: JSON.stringify({ error: adminCheck.message }) };
-      }
-      if (!['confirmado', 'cancelado'].includes(status)) {
-        return { statusCode: 400, body: JSON.stringify({ error: 'Status sem notificação por e-mail.' }) };
-      }
+    if (type === 'status' && !['confirmado', 'cancelado'].includes(status)) {
+      return { statusCode: 400, body: JSON.stringify({ error: 'Status sem notificação por e-mail.' }) };
     }
 
     const transporter = createTransporter();

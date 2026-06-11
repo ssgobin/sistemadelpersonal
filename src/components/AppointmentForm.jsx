@@ -155,7 +155,7 @@ export default function AppointmentForm() {
       await Swal.fire({
         icon: 'success',
         title: 'Agendamento recebido',
-        text: 'Del recebeu sua solicitação. Em breve o horário será confirmado pelo WhatsApp.',
+        text: 'Del recebeu sua solicitação. Em breve o horário será confirmado pelo e-mail.',
         confirmButtonColor: '#9cff2e',
         background: '#0d1218',
         color: '#f8fafc',
